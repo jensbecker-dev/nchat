@@ -1,0 +1,30 @@
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Env
+.env
+.env.local
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/*.tsbuildinfo
+
+# Go
+backend/bin/
+backend/coverage.out
+backend/.tools/
+
+# Launcher runtime
+.run/
+
+# SQLite runtime
+backend/data/
+
+# Generated
+backend/gen/

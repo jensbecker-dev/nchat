@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package chat.v1;
+
+option go_package = "github.com/youruser/nchat/backend/gen/chat/v1;chatv1";
+
+message EncryptedMessage {
+  int64 id = 1;
+  string sender = 2;
+  string ciphertext = 3;
+  string nonce = 4;
+  string created_at = 5;
+}
+
+message SendMessageRequest {
+  string sender = 1;
+  string ciphertext = 2;
+  string nonce = 3;
+}
+
+message SendMessageResponse {
+  EncryptedMessage message = 1;
+}
+
+message ListMessagesRequest {
+  int32 limit = 1;
+}
+
+message ListMessagesResponse {
+  repeated EncryptedMessage messages = 1;
+}
+
+service ChatRelayService {
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  rpc StreamMessages(ListMessagesRequest) returns (stream EncryptedMessage);
+}
