@@ -2,9 +2,11 @@
 
 ![banner](banner.png)
 
-NCHAT (NetworkChat) is a local-network-first secure operator chat for pentest and red-team workflows.
+---
 
-The current implementation provides:
+**NCHAT** (NetworkChat) is a local-network-first secure operator chat for security and privacy focused communication.
+
+## Features
 
 - Go backend with encrypted-message relay and persistence
 - React + TypeScript frontend with client-side crypto
