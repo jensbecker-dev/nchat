@@ -114,10 +114,6 @@ make frontend
 
 ![File Sharing](screenshots/fileshare.png)
 
-### Group Chat (Dark Theme)
-
-![Group Chat Dark Theme](screenshots/group_dark_theme.png)
-
 ## API Endpoints
 
 - `GET /healthz`
