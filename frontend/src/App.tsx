@@ -1436,7 +1436,7 @@ export default function App() {
 
   return (
     <main className="corp-shell">
-      <section className="workspace">
+      <section className={`workspace ${sidebarCollapsed && !isMobileLayout ? "sidebar-collapsed-desktop" : ""}`}>
         {isMobileLayout && !sidebarCollapsed ? (
           <button
             type="button"
@@ -1749,21 +1749,26 @@ export default function App() {
               {cryptoMode === "insecure" ? <p className="muted">Compatibility mode: messaging is available, end-to-end encryption is disabled on this device.</p> : null}
             </div>
             <div className="topbar-actions">
-              <button type="button" className="theme-btn" onClick={() => setSidebarCollapsed((prev) => !prev)}>
-                {sidebarCollapsed ? "Show Contacts" : "Hide Contacts"}
-              </button>
-              <span className={`security-pill ${cryptoMode === "secure" ? "secure" : "insecure"}`}>
-                {cryptoMode === "secure" ? "Secure" : "Compatibility"}
-              </span>
-              <span className="chip">E2E: {cryptoEngine}</span>
-              <span className="chip">{nickname}</span>
-              <span className="chip">{clientId.slice(0, 8)}...</span>
-              <button type="button" className="theme-btn" onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}>
-                {theme === "dark" ? "Light Mode" : "Dark Mode"}
-              </button>
-              <button type="button" className="logout-btn" onClick={handleLogout}>
-                Logout
-              </button>
+              <div className="topbar-control-group">
+                <button type="button" className="theme-btn" onClick={() => setSidebarCollapsed((prev) => !prev)}>
+                  {sidebarCollapsed ? "Show Contacts" : "Hide Contacts"}
+                </button>
+                <button type="button" className="theme-btn" onClick={() => setTheme((prev) => (prev === "dark" ? "light" : "dark"))}>
+                  {theme === "dark" ? "Light Mode" : "Dark Mode"}
+                </button>
+                <button type="button" className="logout-btn" onClick={handleLogout}>
+                  Logout
+                </button>
+              </div>
+
+              <div className="topbar-meta-group" aria-label="Session information">
+                <span className={`security-pill ${cryptoMode === "secure" ? "secure" : "insecure"}`}>
+                  {cryptoMode === "secure" ? "Secure" : "Compatibility"}
+                </span>
+                <span className="chip">E2E: {cryptoEngine}</span>
+                <span className="chip">User: {nickname}</span>
+                <span className="chip">ID: {clientId.slice(0, 8)}...</span>
+              </div>
             </div>
           </header>
 

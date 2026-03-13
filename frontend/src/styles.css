@@ -219,14 +219,21 @@ button:disabled {
 }
 
 .workspace {
+  --sidebar-track: clamp(250px, 22vw, 330px);
   position: relative;
   width: 100%;
   max-width: 1520px;
   margin: 0 auto;
   min-height: calc(100dvh - clamp(1.5rem, 4vw, 3rem));
   display: grid;
-  grid-template-columns: clamp(250px, 22vw, 330px) minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-track) minmax(0, 1fr);
   gap: 1rem;
+  transition: grid-template-columns 200ms ease, gap 200ms ease;
+}
+
+.workspace.sidebar-collapsed-desktop {
+  --sidebar-track: var(--panel-compact);
+  gap: 0.75rem;
 }
 
 .drawer-backdrop {
@@ -251,6 +258,7 @@ button:disabled {
   transition: width var(--transition), padding var(--transition), opacity var(--transition), transform var(--transition);
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--surface) 82%, var(--brand) 8%), var(--surface));
+  overflow: hidden;
 }
 
 .sidebar.collapsed {
@@ -307,6 +315,16 @@ button:disabled {
   color: var(--text);
   background: var(--surface-elev);
   border: 1px solid var(--border);
+  transition: transform var(--transition), background var(--transition), border-color var(--transition);
+}
+
+.sidebar-toggle-btn:hover {
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface-elev));
+  border-color: color-mix(in srgb, var(--brand) 44%, var(--border));
+}
+
+.sidebar.collapsed .sidebar-toggle-btn {
+  transform: rotate(180deg);
 }
 
 .sidebar-rail-btn {
@@ -682,12 +700,17 @@ button:disabled {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  gap: 0.9rem;
+  align-items: flex-start;
+  gap: 1rem;
+  border: 1px solid color-mix(in srgb, var(--border) 92%, transparent);
+  border-radius: 14px;
+  padding: 0.7rem 0.75rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--surface-elev) 78%, var(--surface)), color-mix(in srgb, var(--surface) 90%, transparent));
 }
 
 .topbar .copy {
-  margin: 0.35rem 0 0;
+  margin: 0.38rem 0 0;
+  font-size: 0.95rem;
 }
 
 .topbar-brand-row {
@@ -708,42 +731,65 @@ button:disabled {
 
 .topbar-actions {
   display: flex;
-  align-items: center;
-  gap: 0.55rem;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.45rem;
   flex-wrap: wrap;
+  justify-content: flex-start;
+  max-width: min(66%, 780px);
+}
+
+.topbar-control-group,
+.topbar-meta-group {
+  display: inline-flex;
+  align-items: center;
   justify-content: flex-end;
-  max-width: min(62%, 760px);
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.topbar-control-group button {
+  min-height: 40px;
+  padding: 0.52rem 0.86rem;
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .chip {
-  padding: 0.35rem 0.55rem;
+  min-height: 30px;
+  padding: 0.33rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--surface-elev);
+  background: color-mix(in srgb, var(--surface-elev) 85%, var(--surface));
   color: var(--text-soft);
-  font-size: 0.79rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
   line-height: 1.2;
 }
 
 .security-pill {
-  padding: 0.35rem 0.65rem;
+  min-height: 30px;
+  padding: 0.33rem 0.72rem;
   border-radius: 999px;
   border: 1px solid transparent;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .security-pill.secure {
-  color: #e8fff5;
-  background: color-mix(in srgb, var(--ok) 35%, transparent);
-  border-color: color-mix(in srgb, var(--ok) 70%, transparent);
+  color: #e9fff6;
+  background: color-mix(in srgb, var(--ok) 28%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 58%, transparent);
 }
 
 .security-pill.insecure {
-  color: #fff3f6;
-  background: color-mix(in srgb, var(--danger) 35%, transparent);
-  border-color: color-mix(in srgb, var(--danger) 70%, transparent);
+  color: #fff2f5;
+  background: color-mix(in srgb, var(--danger) 26%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 56%, transparent);
 }
 
 .chat-feed {
@@ -1058,8 +1104,10 @@ button:disabled {
 
 @media (max-width: 1024px) {
   .workspace {
+    --sidebar-track: 1fr;
     grid-template-columns: 1fr;
     min-height: calc(100dvh - 1.1rem);
+    transition: none;
   }
 
   .drawer-backdrop {
@@ -1149,12 +1197,20 @@ button:disabled {
     flex-direction: column;
     align-items: stretch;
     gap: 0.65rem;
+    padding: 0.62rem;
   }
 
   .topbar-actions {
     width: 100%;
     justify-content: flex-start;
+    align-items: stretch;
     max-width: 100%;
+  }
+
+  .topbar-control-group,
+  .topbar-meta-group {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .topbar-logo {
@@ -1233,12 +1289,21 @@ button:disabled {
     min-width: 128px;
   }
 
+  .topbar-control-group button {
+    min-height: 38px;
+    padding: 0.48rem 0.72rem;
+  }
+
   .chat-feed {
     max-height: 46vh;
   }
 }
 
 @media (min-width: 1025px) {
+  .workspace.sidebar-collapsed-desktop .chat-stage {
+    margin-left: 0;
+  }
+
   .sidebar.collapsed .sidebar-title-row,
   .sidebar.collapsed .partner-search,
   .sidebar.collapsed .partner-list {
