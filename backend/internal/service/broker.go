@@ -8,17 +8,17 @@ import (
 
 type Broker struct {
 	mu      sync.RWMutex
-	clients map[chan model.EncryptedMessage]struct{}
+	clients map[chan model.EncryptedMessage]string
 }
 
 func NewBroker() *Broker {
-	return &Broker{clients: make(map[chan model.EncryptedMessage]struct{})}
+	return &Broker{clients: make(map[chan model.EncryptedMessage]string)}
 }
 
-func (b *Broker) Subscribe() chan model.EncryptedMessage {
+func (b *Broker) Subscribe(clientID string) chan model.EncryptedMessage {
 	ch := make(chan model.EncryptedMessage, 16)
 	b.mu.Lock()
-	b.clients[ch] = struct{}{}
+	b.clients[ch] = clientID
 	b.mu.Unlock()
 	return ch
 }
@@ -36,10 +36,35 @@ func (b *Broker) Broadcast(message model.EncryptedMessage) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
 
-	for ch := range b.clients {
+	for ch, clientID := range b.clients {
+		if !shouldDeliverMessage(message, clientID) {
+			continue
+		}
 		select {
 		case ch <- message:
 		default:
 		}
 	}
+}
+
+func shouldDeliverMessage(message model.EncryptedMessage, clientID string) bool {
+	if clientID == "" {
+		return false
+	}
+
+	if message.ChatType == "public" {
+		return true
+	}
+
+	if message.SenderClientID == clientID {
+		return true
+	}
+
+	for _, recipient := range message.RecipientClientIDs {
+		if recipient == clientID {
+			return true
+		}
+	}
+
+	return false
 }

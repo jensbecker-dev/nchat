@@ -133,6 +133,58 @@ func (s *SQLiteStore) ListMessages(limit int) ([]model.EncryptedMessage, error) 
 	return messages, nil
 }
 
+func (s *SQLiteStore) ListMessagesForClient(clientID string, limit int) ([]model.EncryptedMessage, error) {
+	if limit <= 0 {
+		limit = 200
+	}
+
+	rows, err := s.db.Query(
+		`SELECT id, sender, sender_client_id, chat_type, group_key, recipient_client_ids, ciphertext, nonce, created_at
+		 FROM messages
+		 WHERE chat_type = 'public'
+		    OR sender_client_id = ?
+		    OR EXISTS (
+		      SELECT 1
+		      FROM json_each(messages.recipient_client_ids)
+		      WHERE json_each.value = ?
+		    )
+		 ORDER BY id DESC
+		 LIMIT ?`,
+		clientID,
+		clientID,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	messages := make([]model.EncryptedMessage, 0, limit)
+	for rows.Next() {
+		var msg model.EncryptedMessage
+		var recipientsRaw string
+		if err := rows.Scan(&msg.ID, &msg.Sender, &msg.SenderClientID, &msg.ChatType, &msg.GroupKey, &recipientsRaw, &msg.Ciphertext, &msg.Nonce, &msg.CreatedAt); err != nil {
+			return nil, err
+		}
+		if recipientsRaw != "" {
+			_ = json.Unmarshal([]byte(recipientsRaw), &msg.RecipientClientIDs)
+		}
+		if msg.ChatType == "" {
+			msg.ChatType = "public"
+		}
+		messages = append(messages, msg)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	for i, j := 0, len(messages)-1; i < j; i, j = i+1, j-1 {
+		messages[i], messages[j] = messages[j], messages[i]
+	}
+
+	return messages, nil
+}
+
 func (s *SQLiteStore) DeletePrivateConversation(selfClientID, partnerClientID string) (int64, error) {
 	selfRecipients, err := json.Marshal([]string{partnerClientID})
 	if err != nil {

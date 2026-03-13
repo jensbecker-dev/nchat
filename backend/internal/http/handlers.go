@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -26,8 +27,23 @@ func NewHandler(cfg config.Config, chat *service.ChatService) *Handler {
 		cfg:  cfg,
 		chat: chat,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: func(_ *http.Request) bool {
-				return true
+			CheckOrigin: func(r *http.Request) bool {
+				if cfg.CORSOrigin == "" || cfg.CORSOrigin == "*" {
+					return true
+				}
+
+				origin := strings.TrimSpace(r.Header.Get("Origin"))
+				if origin == "" {
+					return false
+				}
+
+				for _, allowed := range strings.Split(cfg.CORSOrigin, ",") {
+					if strings.TrimSpace(allowed) == origin {
+						return true
+					}
+				}
+
+				return false
 			},
 		},
 	}
@@ -59,6 +75,12 @@ func (h *Handler) KeyExchange(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) ListMessages(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("clientId")
+	if clientID == "" {
+		respondError(w, http.StatusBadRequest, "clientId is required")
+		return
+	}
+
 	limit := h.cfg.MaxMessages
 	if rawLimit := r.URL.Query().Get("limit"); rawLimit != "" {
 		if parsedLimit, err := strconv.Atoi(rawLimit); err == nil && parsedLimit > 0 && parsedLimit <= 1000 {
@@ -66,10 +88,10 @@ func (h *Handler) ListMessages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	messages, err := h.chat.ListMessages(limit)
+	messages, err := h.chat.ListMessages(clientID, limit)
 	if err != nil {
 		log.Printf("list messages failed: %v", err)
-		respondError(w, http.StatusInternalServerError, "failed to load messages")
+		respondError(w, http.StatusBadRequest, "failed to load messages")
 		return
 	}
 
@@ -274,6 +296,12 @@ func (h *Handler) PingPresence(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) WebSocket(w http.ResponseWriter, r *http.Request) {
+	clientID := r.URL.Query().Get("clientId")
+	if clientID == "" {
+		respondError(w, http.StatusBadRequest, "clientId is required")
+		return
+	}
+
 	conn, err := h.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("websocket upgrade failed: %v", err)
@@ -281,7 +309,11 @@ func (h *Handler) WebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	messages := h.chat.Subscribe()
+	messages, err := h.chat.Subscribe(clientID)
+	if err != nil {
+		_ = conn.WriteJSON(map[string]string{"error": err.Error()})
+		return
+	}
 	defer h.chat.Unsubscribe(messages)
 
 	conn.SetReadLimit(1024)

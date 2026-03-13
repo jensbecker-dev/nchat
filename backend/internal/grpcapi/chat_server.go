@@ -7,6 +7,8 @@ import (
 	chatv1 "github.com/youruser/nchat/backend/gen/chat/v1"
 	"github.com/youruser/nchat/backend/internal/model"
 	"github.com/youruser/nchat/backend/internal/service"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ChatServer struct {
@@ -19,48 +21,18 @@ func NewChatServer(chat *service.ChatService) *ChatServer {
 }
 
 func (s *ChatServer) SendMessage(_ context.Context, req *chatv1.SendMessageRequest) (*chatv1.SendMessageResponse, error) {
-	stored, err := s.chat.PostMessage(model.PostMessageRequest{
-		Sender:     req.GetSender(),
-		Ciphertext: req.GetCiphertext(),
-		Nonce:      req.GetNonce(),
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &chatv1.SendMessageResponse{Message: toProtoMessage(stored)}, nil
+	_ = req
+	return nil, status.Error(codes.FailedPrecondition, "gRPC SendMessage requires senderClientId/chatType/recipients; use REST /api/v1/messages")
 }
 
 func (s *ChatServer) ListMessages(_ context.Context, req *chatv1.ListMessagesRequest) (*chatv1.ListMessagesResponse, error) {
-	messages, err := s.chat.ListMessages(int(req.GetLimit()))
-	if err != nil {
-		return nil, err
-	}
-
-	out := make([]*chatv1.EncryptedMessage, 0, len(messages))
-	for _, msg := range messages {
-		out = append(out, toProtoMessage(msg))
-	}
-	return &chatv1.ListMessagesResponse{Messages: out}, nil
+	_ = req
+	return nil, status.Error(codes.FailedPrecondition, "gRPC ListMessages requires client identity; use REST /api/v1/messages?clientId=...")
 }
 
 func (s *ChatServer) StreamMessages(_ *chatv1.ListMessagesRequest, stream chatv1.ChatRelayService_StreamMessagesServer) error {
-	updates := s.chat.Subscribe()
-	defer s.chat.Unsubscribe(updates)
-
-	for {
-		select {
-		case <-stream.Context().Done():
-			return nil
-		case msg, ok := <-updates:
-			if !ok {
-				return nil
-			}
-			if err := stream.Send(toProtoMessage(msg)); err != nil {
-				return err
-			}
-		}
-	}
+	_ = stream
+	return status.Error(codes.FailedPrecondition, "gRPC StreamMessages requires client identity; use WebSocket /ws?clientId=...")
 }
 
 func toProtoMessage(msg model.EncryptedMessage) *chatv1.EncryptedMessage {

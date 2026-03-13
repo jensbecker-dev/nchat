@@ -914,32 +914,38 @@ export default function App() {
     return [...map.entries()].map(([key, partnerIds]) => ({ key, partnerIds }));
   }, [conversationThreads, clientId]);
 
-  async function decryptAndAddMessage(message: EncryptedMessage, key: RoomKey | null) {
+  async function decryptMessageForState(message: EncryptedMessage, key: RoomKey | null): Promise<DecryptedMessage | null> {
     try {
       const plaintext = await decryptMessage(message.ciphertext, message.nonce, key);
       const content = decodeMessageContent(plaintext);
+      return {
+        id: message.id,
+        sender: message.sender,
+        senderClientId: message.senderClientId ?? "",
+        chatType: message.chatType ?? "public",
+        groupKey: message.groupKey ?? "",
+        recipientClientIds: message.recipientClientIds ?? [],
+        content,
+        preview: messagePreview(content),
+        createdAt: message.createdAt
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  async function decryptAndAddMessage(message: EncryptedMessage, key: RoomKey | null) {
+    const nextMessage = await decryptMessageForState(message, key);
+    if (!nextMessage) {
+      return;
+    }
+
       setMessages((prev) => {
-        if (prev.some((item) => item.id === message.id)) {
+        if (prev.some((item) => item.id === nextMessage.id)) {
           return prev;
         }
-        return [
-          ...prev,
-          {
-            id: message.id,
-            sender: message.sender,
-            senderClientId: message.senderClientId ?? "",
-            chatType: message.chatType ?? "public",
-            groupKey: message.groupKey ?? "",
-            recipientClientIds: message.recipientClientIds ?? [],
-            content,
-            preview: messagePreview(content),
-            createdAt: message.createdAt
-          }
-        ];
+        return [...prev, nextMessage];
       });
-    } catch {
-      // Ignore payloads that cannot be decrypted with current session key.
-    }
   }
 
   async function connectNode(event: FormEvent) {
@@ -974,13 +980,24 @@ export default function App() {
       setNickname(response.nickname);
 
       setStatus("Syncing encrypted history...");
-      const history = await loadMessages();
-      for (const msg of history) {
-        await decryptAndAddMessage(msg, importedRoomKey);
-      }
+      const history = await loadMessages(response.clientId);
+      const decryptedHistory = await Promise.all(history.map((msg) => decryptMessageForState(msg, importedRoomKey)));
+      setMessages((prev) => {
+        const byID = new Map<number, DecryptedMessage>();
+        for (const item of prev) {
+          byID.set(item.id, item);
+        }
+        for (const item of decryptedHistory) {
+          if (!item) {
+            continue;
+          }
+          byID.set(item.id, item);
+        }
+        return [...byID.values()].sort((a, b) => a.id - b.id);
+      });
 
       setStatus("Opening realtime channel...");
-      const ws = openMessageSocket((message) => {
+      const ws = openMessageSocket(response.clientId, (message) => {
         void decryptAndAddMessage(message, importedRoomKey);
       });
       socketRef.current = ws;

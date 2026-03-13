@@ -118,10 +118,10 @@ make frontend
 
 - `GET /healthz`
 - `POST /api/v1/key-exchange`
-- `GET /api/v1/messages?limit=200`
+- `GET /api/v1/messages?clientId=<myId>&limit=200`
 - `POST /api/v1/messages`
 - `GET /api/v1/users?query=<nameOrId>&excludeClientId=<myId>`
-- `GET /ws`
+- `GET /ws?clientId=<myId>`
 
 ## Security Guardrails
 

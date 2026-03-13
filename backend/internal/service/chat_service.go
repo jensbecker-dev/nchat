@@ -192,8 +192,17 @@ func (s *ChatService) PostMessage(req model.PostMessageRequest) (model.Encrypted
 	return stored, nil
 }
 
-func (s *ChatService) ListMessages(limit int) ([]model.EncryptedMessage, error) {
-	return s.store.ListMessages(limit)
+func (s *ChatService) ListMessages(clientID string, limit int) ([]model.EncryptedMessage, error) {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return nil, errors.New("clientId is required")
+	}
+
+	if !s.isSessionKnown(clientID) {
+		return nil, errors.New("invalid session id")
+	}
+
+	return s.store.ListMessagesForClient(clientID, limit)
 }
 
 func (s *ChatService) ClearPrivateChat(selfClientID, partnerClientID string) (int64, error) {
@@ -455,8 +464,16 @@ func (s *ChatService) TouchUser(clientID string) bool {
 	return true
 }
 
-func (s *ChatService) Subscribe() chan model.EncryptedMessage {
-	return s.broker.Subscribe()
+func (s *ChatService) Subscribe(clientID string) (chan model.EncryptedMessage, error) {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return nil, errors.New("clientId is required")
+	}
+	if !s.isSessionKnown(clientID) {
+		return nil, errors.New("invalid session id")
+	}
+
+	return s.broker.Subscribe(clientID), nil
 }
 
 func (s *ChatService) Unsubscribe(ch chan model.EncryptedMessage) {
@@ -567,4 +584,17 @@ func (s *ChatService) isSessionActive(clientID string) bool {
 	}
 
 	return true
+}
+
+func (s *ChatService) isSessionKnown(clientID string) bool {
+	clientID = strings.TrimSpace(clientID)
+	if clientID == "" {
+		return false
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	_, ok := s.users[clientID]
+	return ok
 }

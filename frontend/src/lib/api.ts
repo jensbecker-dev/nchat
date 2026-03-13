@@ -107,9 +107,10 @@ export async function exchangeKey(nickname: string, publicKey: string, clientId?
   return response.json() as Promise<KeyExchangeResponse>;
 }
 
-export async function loadMessages(limit = 200): Promise<EncryptedMessage[]> {
+export async function loadMessages(clientId: string, limit = 200): Promise<EncryptedMessage[]> {
   const apiBase = await resolveApiBase();
-  const response = await fetch(`${apiBase}/api/v1/messages?limit=${limit}`);
+  const params = new URLSearchParams({ limit: String(limit), clientId });
+  const response = await fetch(`${apiBase}/api/v1/messages?${params.toString()}`);
   if (!response.ok) {
     throw new Error("Failed to load messages");
   }
@@ -295,8 +296,10 @@ export async function deleteGroupChat(actorClientId: string, memberClientIds: st
   return groupAction("/api/v1/messages/group/delete", actorClientId, memberClientIds);
 }
 
-export function openMessageSocket(onMessage: (message: EncryptedMessage) => void): WebSocket {
-  const ws = new WebSocket(resolvedWsUrl ?? DEFAULT_WS_URL);
+export function openMessageSocket(clientId: string, onMessage: (message: EncryptedMessage) => void): WebSocket {
+  const url = new URL(resolvedWsUrl ?? DEFAULT_WS_URL);
+  url.searchParams.set("clientId", clientId);
+  const ws = new WebSocket(url.toString());
 
   ws.onmessage = (event) => {
     const message = JSON.parse(event.data) as EncryptedMessage;
