@@ -43,7 +43,7 @@
 ├── screenshots/
 │   ├── login.png
 │   ├── chat.png
-│   └── group_dark_theme.png
+│   └── fileshare.png
 ├── docker-compose.yml
 └── Makefile
 ```
